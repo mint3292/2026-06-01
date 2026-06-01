@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>대한민국 결빙 교통사고 다발지역 모니터링 시스템</title>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts (Outfit & Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    :root {
+      --bg-main: #060913;
+      --bg-card: rgba(13, 20, 38, 0.7);
+      --bg-card-hover: rgba(20, 30, 58, 0.85);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(56, 189, 248, 0.4);
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --primary-glow: rgba(56, 189, 248, 0.25);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --accent-danger: #ef4444;
+      --accent-warning: #f97316;
+      --accent-caution: #f59e0b;
+      --accent-info: #3b82f6;
+      
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      
+      --font-family: 'Outfit', 'Noto Sans KR', 'Inter', sans-serif;
+    }
+
+    /* Global Reset & Base Styling */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.08) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    /* Scrollbar Customization */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.3);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.2);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(56, 189, 248, 0.4);
+    }
+
+    /* Layout Containers */
+    header {
+      background: rgba(10, 15, 30, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-card);
+      padding: 1.25rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header-logo i {
+      font-size: 1.75rem;
+      color: var(--primary);
+      text-shadow: 0 0 10px var(--primary-glow);
+      animation: pulse 2s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.1); opacity: 1; }
+    }
+
+    .header-title h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #f8fafc, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-title p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    .header-time {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.5rem 0.75rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-card);
+    }
+
+    .main-container {
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 3rem 2rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Filters Section */
+    .filter-panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 150px;
+      gap: 1rem;
+      align-items: end;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-select, .form-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      outline: none;
+      transition: var(--transition-fast);
+      width: 100%;
+    }
+
+    .form-select:focus, .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .form-select option {
+      background: #0f172a;
+      color: var(--text-main);
+    }
+
+    .btn-search {
+      background: linear-gradient(135deg, var(--primary), #6366f1);
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      cursor: pointer;
+      font-family: var(--font-family);
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 0.75rem 1.5rem;
+      transition: var(--transition-normal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      height: 46px;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+    }
+
+    .btn-search:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+      filter: brightness(1.1);
+    }
+
+    .btn-search:active {
+      transform: translateY(0);
+    }
+
+    /* KPI Metrics Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: var(--transition-normal);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-info);
+    }
+
+    .kpi-card.danger::before { background: var(--accent-danger); }
+    .kpi-card.warning::before { background: var(--accent-warning); }
+    .kpi-card.caution::before { background: var(--accent-caution); }
+    .kpi-card.primary::before { background: var(--primary); }
+
+    .kpi-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--border-active);
+      box-shadow: 0 10px 25px -10px rgba(56, 189, 248, 0.15);
+    }
+
+    .kpi-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .kpi-value {
+      font-size: 2rem;
+      font-weight: 800;
+      font-family: 'Outfit', sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-icon {
+      font-size: 2.25rem;
+      color: rgba(255, 255, 255, 0.05);
+      transition: var(--transition-normal);
+    }
+
+    .kpi-card:hover .kpi-icon {
+      color: var(--primary);
+      transform: scale(1.1) rotate(5deg);
+      text-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .kpi-card.danger:hover .kpi-icon { color: var(--accent-danger); text-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+    .kpi-card.warning:hover .kpi-icon { color: var(--accent-warning); text-shadow: 0 0 15px rgba(249, 115, 22, 0.3); }
+    .kpi-card.caution:hover .kpi-icon { color: var(--accent-caution); text-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
+
+    /* Dashboard Main Split Layout */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 1.5rem;
+      min-height: 580px;
+    }
+
+    /* Left Panel: Map Container */
+    .map-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 15px 35px -15px rgba(0, 0, 0, 0.7);
+    }
+
+    .map-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-card);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 15, 30, 0.4);
+    }
+
+    .map-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .map-title i {
+      color: var(--primary);
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      min-height: 480px;
+      z-index: 1;
+      background: #0f172a;
+    }
+
+    /* Map Legend Overlay */
+    .map-legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 500;
+      background: rgba(10, 15, 30, 0.95);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    }
+
+    .legend-title {
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 0.25rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    /* Custom Map Popups styling */
+    .leaflet-popup-content-wrapper {
+      background: rgba(10, 15, 30, 0.95) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-card) !important;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+      border-radius: 12px !important;
+      backdrop-filter: blur(10px);
+    }
+
+    .leaflet-popup-tip {
+      background: rgba(10, 15, 30, 0.95) !important;
+      border: 1px solid var(--border-card) !important;
+    }
+
+    .map-popup-card {
+      font-family: var(--font-family);
+      width: 250px;
+      padding: 0.25rem;
+    }
+
+    .map-popup-header {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--primary);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .map-popup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .map-popup-label {
+      color: var(--text-muted);
+    }
+
+    .map-popup-val {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .map-popup-val.danger { color: var(--accent-danger); }
+    .map-popup-val.warning { color: var(--accent-warning); }
+
+    /* Right Panel: Side Cards Tab Container */
+    .side-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 15px 35px -15px rgba(0, 0, 0, 0.7);
+    }
+
+    .side-tabs {
+      display: flex;
+      background: rgba(10, 15, 30, 0.4);
+      border-bottom: 1px solid var(--border-card);
+    }
+
+    .side-tab {
+      flex: 1;
+      padding: 1rem 0.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      border-bottom: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .side-tab:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .side-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .side-content {
+      padding: 1.5rem;
+      flex: 1;
+      overflow-y: auto;
+      max-height: 480px;
+      position: relative;
+    }
+
+    /* Accident List Styles */
+    .zone-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .zone-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: var(--transition-normal);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .zone-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-active);
+      transform: translateX(4px);
+    }
+
+    .zone-item.selected {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: var(--primary);
+    }
+
+    .zone-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 0.5rem;
+    }
+
+    .zone-name {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--text-main);
+      line-height: 1.3;
+    }
+
+    .zone-badge {
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .badge-high { background: rgba(239, 68, 68, 0.15); color: var(--accent-danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-medium { background: rgba(249, 115, 22, 0.15); color: var(--accent-warning); border: 1px solid rgba(249, 115, 22, 0.3); }
+    .badge-low { background: rgba(245, 158, 11, 0.15); color: var(--accent-caution); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .zone-details-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.25rem;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      padding-top: 0.5rem;
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+    }
+
+    .zone-detail-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .zone-detail-lbl {
+      color: var(--text-muted);
+      font-size: 0.65rem;
+      margin-bottom: 0.1rem;
+    }
+
+    .zone-detail-val {
+      font-weight: 700;
+    }
+
+    /* Charts Tab styles */
+    .chart-wrapper {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .chart-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .chart-title i {
+      color: var(--primary);
+    }
+
+    .chart-container {
+      height: 220px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Safety Tips Styling */
+    .tips-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .tip-card {
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 3px solid var(--primary);
+      padding: 1rem;
+      border-radius: 0 12px 12px 0;
+      display: flex;
+      gap: 0.75rem;
+      align-items: start;
+    }
+
+    .tip-card i {
+      font-size: 1.25rem;
+      color: var(--primary);
+      margin-top: 0.1rem;
+    }
+
+    .tip-info h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: var(--text-main);
+    }
+
+    .tip-info p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Bottom Section: Expandable Data Table Drawer */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 15px 35px -15px rgba(0, 0, 0, 0.7);
+    }
+
+    .table-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-card);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 15, 30, 0.4);
+    }
+
+    .table-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .table-title i {
+      color: var(--primary);
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .btn-export {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid var(--primary-glow);
+      color: var(--primary);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition-fast);
+    }
+
+    .btn-export:hover {
+      background: var(--primary);
+      color: #0b0f19;
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .table-wrapper {
+      max-height: 350px;
+      overflow-y: auto;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    th {
+      background: rgba(10, 15, 30, 0.6);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 1rem 1.25rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-card);
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition-fast);
+    }
+
+    th:hover {
+      color: var(--text-main);
+      background: rgba(10, 15, 30, 0.8);
+    }
+
+    th i {
+      margin-left: 0.25rem;
+      font-size: 0.75rem;
+    }
+
+    td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      color: var(--text-main);
+      transition: var(--transition-fast);
+    }
+
+    tr {
+      transition: var(--transition-fast);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    tr.selected td {
+      background: rgba(56, 189, 248, 0.05);
+      border-bottom-color: var(--primary-glow);
+    }
+
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    
+    .font-semibold { font-weight: 600; }
+    .text-danger { color: var(--accent-danger); }
+    .text-warning { color: var(--accent-warning); }
+
+    /* Loading Overlay & Info States */
+    .loader-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(6, 9, 19, 0.85);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      transition: opacity var(--transition-normal);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(56, 189, 248, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s infinite linear;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loader-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--text-muted);
+      height: 100%;
+      min-height: 250px;
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+
+    .empty-state h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+      font-size: 0.85rem;
+      max-width: 320px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+      .side-content {
+        max-height: 400px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+      }
+      .main-container {
+        padding: 1rem;
+      }
+      .filter-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation/Header -->
+  <header>
+    <div class="header-logo">
+      <i class="fa-solid fa-snowflake-o fa-snowflake"></i>
+      <div class="header-title">
+        <h1>결빙 교통사고 다발지역 모니터링</h1>
+        <p>Road Freeze Accident Hotspot Analytics Dashboard</p>
+      </div>
+    </div>
+    <div class="header-time">
+      <i class="fa-regular fa-clock"></i>
+      <span id="live-time">Loading system status...</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Filters Panel -->
+    <section class="filter-panel">
+      <!-- Year Select -->
+      <div class="form-group">
+        <label for="select-year"><i class="fa-regular fa-calendar-days"></i> 조회 연도</label>
+        <select id="select-year" class="form-select">
+          <option value="2023" selected>2023 년 (최신)</option>
+          <option value="2022">2022 년</option>
+          <option value="2021">2021 년</option>
+          <option value="2020">2020 년</option>
+          <option value="2019">2019 년</option>
+          <option value="2018">2018 년</option>
+          <option value="2017">2017 년</option>
+          <option value="2016">2016 년</option>
+          <option value="2015">2015 년</option>
+        </select>
+      </div>
+
+      <!-- Sido Select -->
+      <div class="form-group">
+        <label for="select-sido"><i class="fa-solid fa-map-location-dot"></i> 시/도 선택</label>
+        <select id="select-sido" class="form-select">
+          <option value="">-- 시/도 선택 --</option>
+        </select>
+      </div>
+
+      <!-- Gugun Select -->
+      <div class="form-group">
+        <label for="select-gugun"><i class="fa-solid fa-location-crosshairs"></i> 시/군/구 선택</label>
+        <select id="select-gugun" class="form-select" disabled>
+          <option value="">-- 시/군/구 선택 --</option>
+        </select>
+      </div>
+
+      <!-- Search button -->
+      <button id="btn-search" class="btn-search" disabled>
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>조회하기</span>
+      </button>
+    </section>
+
+    <!-- KPI Metrics Panel -->
+    <section class="kpi-grid">
+      <!-- Card 1: Accident zones -->
+      <div class="kpi-card primary">
+        <div class="kpi-info">
+          <span class="kpi-label">사고 다발구역 수</span>
+          <span id="kpi-zones" class="kpi-value">0</span>
+        </div>
+        <i class="fa-solid fa-circle-exclamation kpi-icon"></i>
+      </div>
+
+      <!-- Card 2: Accidents count -->
+      <div class="kpi-card warning">
+        <div class="kpi-info">
+          <span class="kpi-label">총 사고 건수</span>
+          <span id="kpi-accidents" class="kpi-value">0</span>
+        </div>
+        <i class="fa-solid fa-car-burst kpi-icon"></i>
+      </div>
+
+      <!-- Card 3: Casualties -->
+      <div class="kpi-card caution">
+        <div class="kpi-info">
+          <span class="kpi-label">총 사상자 수</span>
+          <span id="kpi-casualties" class="kpi-value">0</span>
+        </div>
+        <i class="fa-solid fa-kit-medical kpi-icon"></i>
+      </div>
+
+      <!-- Card 4: Deaths -->
+      <div class="kpi-card danger">
+        <div class="kpi-info">
+          <span class="kpi-label">총 사망자 수</span>
+          <span id="kpi-deaths" class="kpi-value">0</span>
+        </div>
+        <i class="fa-solid fa-skull-crossbones kpi-icon"></i>
+      </div>
+    </section>
+
+    <!-- Dashboard Core Layout -->
+    <section class="dashboard-layout">
+      <!-- Map Area (Left) -->
+      <div class="map-container">
+        <div class="map-header">
+          <span class="map-title"><i class="fa-solid fa-map"></i> 인터랙티브 결빙 지도</span>
+          <span id="map-status" style="font-size: 0.75rem; color: var(--text-muted);">지도 초기화 완료</span>
+        </div>
+        
+        <div id="map"></div>
+
+        <!-- Custom Map Legend Overlay -->
+        <div class="map-legend">
+          <span class="legend-title">사고 다발 위험 레벨</span>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-danger);"></div>
+            <span>고위험 구역 (사고 10건 이상)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-warning);"></div>
+            <span>중위험 구역 (사고 5 ~ 9건)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-caution);"></div>
+            <span>주의 위험 구역 (사고 3 ~ 4건)</span>
+          </div>
+        </div>
+
+        <!-- Local Loading overlay inside map -->
+        <div id="loader" class="loader-overlay">
+          <div class="spinner"></div>
+          <span class="loader-text">공공데이터 포털에서 결빙 정보를 조회하고 있습니다...</span>
+        </div>
+      </div>
+
+      <!-- Tab Panels Area (Right) -->
+      <div class="side-panel">
+        <nav class="side-tabs">
+          <div id="tab-list" class="side-tab active" data-tab="list-pane">
+            <i class="fa-solid fa-list-ul"></i> 사고 지역 목록
+          </div>
+          <div id="tab-analytics" class="side-tab" data-tab="analytics-pane">
+            <i class="fa-solid fa-chart-pie"></i> 통계분석
+          </div>
+          <div id="tab-safety" class="side-tab" data-tab="safety-pane">
+            <i class="fa-solid fa-shield-halved"></i> 겨울 안전수칙
+          </div>
+        </nav>
+
+        <div class="side-content">
+          <!-- Pane 1: Accident zones list -->
+          <div id="list-pane" class="tab-pane-content">
+            <div id="empty-state-list" class="empty-state">
+              <i class="fa-solid fa-map-location-dot"></i>
+              <h3>조회된 데이터 없음</h3>
+              <p>시도와 시군구를 선택하고 [조회하기] 버튼을 눌러 결빙 다발지역 데이터를 검색해 주세요.</p>
+            </div>
+            
+            <div id="zone-list-container" class="zone-list" style="display: none;">
+              <!-- Dynamic zone items inject here -->
+            </div>
+          </div>
+
+          <!-- Pane 2: Charts and Analytics -->
+          <div id="analytics-pane" class="tab-pane-content" style="display: none;">
+            <div id="empty-state-analytics" class="empty-state">
+              <i class="fa-solid fa-chart-simple"></i>
+              <h3>조회된 데이터 없음</h3>
+              <p>조회된 지역의 통계를 분석하려면 상단 필터에서 데이터를 먼저 조회하세요.</p>
+            </div>
+            
+            <div id="charts-container" style="display: none;">
+              <div class="chart-wrapper">
+                <span class="chart-title"><i class="fa-solid fa-circle-exclamation"></i> 부상 심각도 분포 (사상자 기준)</span>
+                <div class="chart-container">
+                  <canvas id="severityChart"></canvas>
+                </div>
+              </div>
+              
+              <div class="chart-wrapper">
+                <span class="chart-title"><i class="fa-solid fa-square-poll-vertical"></i> 주요 피해 지표 비교</span>
+                <div class="chart-container">
+                  <canvas id="compareChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane 3: Safety Guidelines -->
+          <div id="safety-pane" class="tab-pane-content" style="display: none;">
+            <div class="tips-container">
+              <div class="tip-card">
+                <i class="fa-solid fa-snowflake"></i>
+                <div class="tip-info">
+                  <h4>서행 및 안전거리 확보</h4>
+                  <p>눈길 및 블랙아이스 빙판길에서는 브레이크 제동거리가 최대 5배 이상 증가합니다. 평소 속도보다 50% 이상 감속 운행하고 앞차와의 거리를 안전하게 확보하세요.</p>
+                </div>
+              </div>
+
+              <div class="tip-card">
+                <i class="fa-solid fa-gauge-high"></i>
+                <div class="tip-info">
+                  <h4>급작스러운 조작 금지</h4>
+                  <p>급제동, 급가속, 급회전은 차량이 미끄러지는 스핀 현상의 주원인입니다. 출발 시에는 부드럽게 가속하며, 제동 시에는 엔진 브레이크와 부드러운 다중 제동(펌핑 브레이크)을 사용하세요.</p>
+                </div>
+              </div>
+
+              <div class="tip-card">
+                <i class="fa-solid fa-car"></i>
+                <div class="tip-info">
+                  <h4>겨울철 차량 정비 필수</h4>
+                  <p>타이어 마모 상태를 사전 체크하고 스노우 타이어 또는 체인을 준비하세요. 부동액 배합비와 워셔액(겨울철용), 와이퍼 기능 상태를 점검하는 것이 매우 중요합니다.</p>
+                </div>
+              </div>
+
+              <div class="tip-card">
+                <i class="fa-solid fa-road"></i>
+                <div class="tip-info">
+                  <h4>상습 결빙 다발지역 주의</h4>
+                  <p>다리 위(교량), 그늘진 터널 진출입로, 계곡 근처 산간 도로 등은 온도가 급격히 낮아져 '블랙아이스(도로 결빙)'가 형성되기 가장 쉬운 구간입니다. 통과 시 세심한 주의가 필요합니다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Detailed Table Section (Bottom) -->
+    <section class="table-container">
+      <div class="table-header">
+        <span class="table-title"><i class="fa-solid fa-table-list"></i> 상세 교통사고 분석 데이터 내역</span>
+        <div class="table-actions">
+          <button id="btn-export" class="btn-export" disabled>
+            <i class="fa-solid fa-file-csv"></i> Excel/CSV 내보내기
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <div id="empty-state-table" class="empty-state" style="padding: 2.5rem 1.5rem;">
+          <i class="fa-solid fa-folder-open"></i>
+          <h3>데이터가 비어 있습니다</h3>
+          <p>결빙 다발지역 정보를 조회하면 여기에 전체 내역이 표 형태로 시각화됩니다.</p>
+        </div>
+        
+        <table id="data-table" style="display: none;">
+          <thead>
+            <tr>
+              <th id="th-name">사고 지역 위치명 <i class="fa-solid fa-sort"></i></th>
+              <th id="th-occur" class="text-right">사고 건수 <i class="fa-solid fa-sort"></i></th>
+              <th id="th-caslt" class="text-right">사상자 수 <i class="fa-solid fa-sort"></i></th>
+              <th id="th-death" class="text-right text-danger">사망자 수 <i class="fa-solid fa-sort"></i></th>
+              <th id="th-se" class="text-right text-warning">중상자 수 <i class="fa-solid fa-sort"></i></th>
+              <th id="th-spt" class="text-right">경상자 수 <i class="fa-solid fa-sort"></i></th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Dynamic rows go here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Complete Javascript Mapping (Sido, Gugun) -->
+  <script>
+    // South Korea Sido / Gugun Legal administrative codes
+    const SIDO_GUGUN_DATA = {
+      "11": [
+        { "code": "110", "name": "종로구" },
+        { "code": "140", "name": "중구" },
+        { "code": "170", "name": "용산구" },
+        { "code": "200", "name": "성동구" },
+        { "code": "215", "name": "광진구" },
+        { "code": "230", "name": "동대문구" },
+        { "code": "260", "name": "중랑구" },
+        { "code": "290", "name": "성북구" },
+        { "code": "305", "name": "강북구" },
+        { "code": "320", "name": "도봉구" },
+        { "code": "350", "name": "노원구" },
+        { "code": "380", "name": "은평구" },
+        { "code": "410", "name": "서대문구" },
+        { "code": "440", "name": "마포구" },
+        { "code": "470", "name": "양천구" },
+        { "code": "500", "name": "강서구" },
+        { "code": "530", "name": "구로구" },
+        { "code": "545", "name": "금천구" },
+        { "code": "560", "name": "영등포구" },
+        { "code": "590", "name": "동작구" },
+        { "code": "620", "name": "관악구" },
+        { "code": "650", "name": "서초구" },
+        { "code": "680", "name": "강남구" },
+        { "code": "710", "name": "송파구" },
+        { "code": "740", "name": "강동구" }
+      ],
+      "26": [
+        { "code": "110", "name": "중구" },
+        { "code": "140", "name": "서구" },
+        { "code": "170", "name": "동구" },
+        { "code": "200", "name": "영도구" },
+        { "code": "230", "name": "부산진구" },
+        { "code": "260", "name": "동래구" },
+        { "code": "290", "name": "남구" },
+        { "code": "320", "name": "북구" },
+        { "code": "350", "name": "해운대구" },
+        { "code": "380", "name": "사하구" },
+        { "code": "410", "name": "금정구" },
+        { "code": "440", "name": "강서구" },
+        { "code": "470", "name": "연제구" },
+        { "code": "500", "name": "수영구" },
+        { "code": "530", "name": "사상구" },
+        { "code": "710", "name": "기장군" }
+      ],
+      "27": [
+        { "code": "110", "name": "중구" },
+        { "code": "140", "name": "동구" },
+        { "code": "170", "name": "서구" },
+        { "code": "200", "name": "남구" },
+        { "code": "230", "name": "북구" },
+        { "code": "260", "name": "수성구" },
+        { "code": "290", "name": "달서구" },
+        { "code": "710", "name": "달성군" },
+        { "code": "720", "name": "군위군" }
+      ],
+      "28": [
+        { "code": "110", "name": "중구" },
+        { "code": "140", "name": "동구" },
+        { "code": "177", "name": "미추홀구" },
+        { "code": "185", "name": "연수구" },
+        { "code": "200", "name": "남동구" },
+        { "code": "237", "name": "부평구" },
+        { "code": "245", "name": "계양구" },
+        { "code": "260", "name": "서구" },
+        { "code": "710", "name": "강화군" },
+        { "code": "720", "name": "옹진군" }
+      ],
+      "29": [
+        { "code": "110", "name": "동구" },
+        { "code": "140", "name": "서구" },
+        { "code": "155", "name": "남구" },
+        { "code": "170", "name": "북구" },
+        { "code": "200", "name": "광산구" }
+      ],
+      "30": [
+        { "code": "110", "name": "동구" },
+        { "code": "140", "name": "중구" },
+        { "code": "170", "name": "서구" },
+        { "code": "200", "name": "유성구" },
+        { "code": "230", "name": "대덕구" }
+      ],
+      "31": [
+        { "code": "110", "name": "중구" },
+        { "code": "140", "name": "남구" },
+        { "code": "170", "name": "동구" },
+        { "code": "200", "name": "북구" },
+        { "code": "710", "name": "울주군" }
+      ],
+      "36": [
+        { "code": "110", "name": "세종특별자치시" }
+      ],
+      "41": [
+        { "code": "111", "name": "수원시 장안구" },
+        { "code": "113", "name": "수원시 권선구" },
+        { "code": "115", "name": "수원시 팔달구" },
+        { "code": "117", "name": "수원시 영통구" },
+        { "code": "131", "name": "성남시 수정구" },
+        { "code": "133", "name": "성남시 중원구" },
+        { "code": "135", "name": "성남시 분당구" },
+        { "code": "150", "name": "의정부시" },
+        { "code": "171", "name": "안양시 만안구" },
+        { "code": "173", "name": "안양시 동안구" },
+        { "code": "190", "name": "부천시" },
+        { "code": "210", "name": "광명시" },
+        { "code": "220", "name": "평택시" },
+        { "code": "250", "name": "동두천시" },
+        { "code": "271", "name": "안산시 상록구" },
+        { "code": "273", "name": "안산시 단원구" },
+        { "code": "281", "name": "고양시 덕양구" },
+        { "code": "285", "name": "고양시 일산동구" },
+        { "code": "287", "name": "고양시 일산서구" },
+        { "code": "290", "name": "과천시" },
+        { "code": "310", "name": "구리시" },
+        { "code": "360", "name": "남양주시" },
+        { "code": "370", "name": "오산시" },
+        { "code": "390", "name": "시흥시" },
+        { "code": "410", "name": "군포시" },
+        { "code": "430", "name": "의왕시" },
+        { "code": "450", "name": "하남시" },
+        { "code": "461", "name": "용인시 처인구" },
+        { "code": "463", "name": "용인시 기흥구" },
+        { "code": "465", "name": "용인시 수지구" },
+        { "code": "480", "name": "파주시" },
+        { "code": "500", "name": "이천시" },
+        { "code": "550", "name": "안성시" },
+        { "code": "570", "name": "김포시" },
+        { "code": "590", "name": "화성시" },
+        { "code": "610", "name": "광주시" },
+        { "code": "630", "name": "양주시" },
+        { "code": "650", "name": "포천시" },
+        { "code": "670", "name": "여주시" },
+        { "code": "800", "name": "연천군" },
+        { "code": "820", "name": "가평군" },
+        { "code": "830", "name": "양평군" }
+      ],
+      "42": [
+        { "code": "110", "name": "춘천시" },
+        { "code": "130", "name": "원주시" },
+        { "code": "150", "name": "강릉시" },
+        { "code": "170", "name": "동해시" },
+        { "code": "190", "name": "태백시" },
+        { "code": "210", "name": "속초시" },
+        { "code": "230", "name": "삼척시" },
+        { "code": "720", "name": "홍천군" },
+        { "code": "730", "name": "횡성군" },
+        { "code": "750", "name": "영월군" },
+        { "code": "760", "name": "평창군" },
+        { "code": "770", "name": "정선군" },
+        { "code": "780", "name": "철원군" },
+        { "code": "790", "name": "화천군" },
+        { "code": "800", "name": "양구군" },
+        { "code": "810", "name": "인제군" },
+        { "code": "820", "name": "고성군" },
+        { "code": "830", "name": "양양군" }
+      ],
+      "43": [
+        { "code": "111", "name": "청주시 상당구" },
+        { "code": "112", "name": "청주시 서원구" },
+        { "code": "113", "name": "청주시 흥덕구" },
+        { "code": "114", "name": "청주시 청원구" },
+        { "code": "130", "name": "충주시" },
+        { "code": "150", "name": "제천시" },
+        { "code": "720", "name": "보은군" },
+        { "code": "730", "name": "옥천군" },
+        { "code": "740", "name": "영동군" },
+        { "code": "745", "name": "증평군" },
+        { "code": "750", "name": "진천군" },
+        { "code": "760", "name": "괴산군" },
+        { "code": "770", "name": "음성군" },
+        { "code": "800", "name": "단양군" }
+      ],
+      "44": [
+        { "code": "131", "name": "천안시 동남구" },
+        { "code": "133", "name": "천안시 서북구" },
+        { "code": "150", "name": "공주시" },
+        { "code": "180", "name": "보령시" },
+        { "code": "200", "name": "아산시" },
+        { "code": "210", "name": "서산시" },
+        { "code": "230", "name": "논산시" },
+        { "code": "250", "name": "계룡시" },
+        { "code": "270", "name": "당진시" },
+        { "code": "710", "name": "금산군" },
+        { "code": "760", "name": "부여군" },
+        { "code": "770", "name": "서천군" },
+        { "code": "790", "name": "청양군" },
+        { "code": "800", "name": "홍성군" },
+        { "code": "810", "name": "예산군" },
+        { "code": "820", "name": "태안군" }
+      ],
+      "45": [
+        { "code": "111", "name": "전주시 완산구" },
+        { "code": "112", "name": "전주시 덕진구" },
+        { "code": "130", "name": "군산시" },
+        { "code": "140", "name": "익산시" },
+        { "code": "180", "name": "정읍시" },
+        { "code": "190", "name": "남원시" },
+        { "code": "210", "name": "김제시" },
+        { "code": "710", "name": "완주군" },
+        { "code": "720", "name": "진안군" },
+        { "code": "730", "name": "무주군" },
+        { "code": "740", "name": "장수군" },
+        { "code": "750", "name": "임실군" },
+        { "code": "760", "name": "순창군" },
+        { "code": "790", "name": "고창군" },
+        { "code": "800", "name": "부안군" }
+      ],
+      "46": [
+        { "code": "110", "name": "목포시" },
+        { "code": "130", "name": "여수시" },
+        { "code": "150", "name": "순천시" },
+        { "code": "170", "name": "나주시" },
+        { "code": "180", "name": "광양시" },
+        { "code": "710", "name": "담양군" },
+        { "code": "720", "name": "곡성군" },
+        { "code": "730", "name": "구례군" },
+        { "code": "770", "name": "고흥군" },
+        { "code": "780", "name": "보성군" },
+        { "code": "790", "name": "화순군" },
+        { "code": "810", "name": "장흥군" },
+        { "code": "820", "name": "강진군" },
+        { "code": "830", "name": "해남군" },
+        { "code": "840", "name": "영암군" },
+        { "code": "870", "name": "무안군" },
+        { "code": "890", "name": "함평군" },
+        { "code": "900", "name": "영광군" },
+        { "code": "910", "name": "장성군" },
+        { "code": "930", "name": "완도군" },
+        { "code": "940", "name": "진도군" },
+        { "code": "960", "name": "신안군" }
+      ],
+      "47": [
+        { "code": "111", "name": "포항시 남구" },
+        { "code": "113", "name": "포항시 북구" },
+        { "code": "130", "name": "경주시" },
+        { "code": "150", "name": "김천시" },
+        { "code": "170", "name": "안동시" },
+        { "code": "190", "name": "구미시" },
+        { "code": "210", "name": "영주시" },
+        { "code": "230", "name": "영천시" },
+        { "code": "250", "name": "상주시" },
+        { "code": "280", "name": "문경시" },
+        { "code": "290", "name": "경산시" },
+        { "code": "840", "name": "의성군" },
+        { "code": "850", "name": "청송군" },
+        { "code": "860", "name": "영양군" },
+        { "code": "870", "name": "영덕군" },
+        { "code": "880", "name": "청도군" },
+        { "code": "890", "name": "고령군" },
+        { "code": "900", "name": "성주군" },
+        { "code": "920", "name": "칠곡군" },
+        { "code": "930", "name": "예천군" },
+        { "code": "940", "name": "봉화군" },
+        { "code": "950", "name": "울진군" },
+        { "code": "960", "name": "울릉군" }
+      ],
+      "48": [
+        { "code": "121", "name": "창원시 의창구" },
+        { "code": "123", "name": "창원시 성산구" },
+        { "code": "125", "name": "창원시 마산합포구" },
+        { "code": "127", "name": "창원시 마산회원구" },
+        { "code": "129", "name": "창원시 진해구" },
+        { "code": "170", "name": "진주시" },
+        { "code": "220", "name": "통영시" },
+        { "code": "240", "name": "사천시" },
+        { "code": "250", "name": "김해시" },
+        { "code": "270", "name": "밀양시" },
+        { "code": "310", "name": "거제시" },
+        { "code": "330", "name": "양산시" },
+        { "code": "720", "name": "의령군" },
+        { "code": "730", "name": "함안군" },
+        { "code": "740", "name": "창녕군" },
+        { "code": "750", "name": "고성군" },
+        { "code": "760", "name": "남해군" },
+        { "code": "770", "name": "하동군" },
+        { "code": "780", "name": "산청군" },
+        { "code": "790", "name": "함양군" },
+        { "code": "850", "name": "거창군" },
+        { "code": "890", "name": "합천군" }
+      ],
+      "50": [
+        { "code": "110", "name": "제주시" },
+        { "code": "130", "name": "서귀포시" }
+      ]
+    };
+
+    const SIDO_NAMES = {
+      "11": "서울특별시",
+      "26": "부산광역시",
+      "27": "대구광역시",
+      "28": "인천광역시",
+      "29": "광주광역시",
+      "30": "대전광역시",
+      "31": "울산광역시",
+      "36": "세종특별자치시",
+      "41": "경기도",
+      "42": "강원특별자치도",
+      "43": "충청북도",
+      "44": "충청남도",
+      "45": "전북특별자치도",
+      "46": "전라남도",
+      "47": "경상북도",
+      "48": "경상남도",
+      "50": "제주특별자치도"
+    };
+  </script>
+
+  <!-- Dashboard Logic -->
+  <script>
+    // API variables
+    const API_ENDPOINT = "https://apis.data.go.kr/B552061/frequentzoneFreezing/getRestFrequentzoneFreezing";
+    const API_KEY = "332e01f64561d877f96dc6a5077983985c19d7380fa9cbfbdfecc891f8c8b2f3";
+
+    // Application state
+    let map = null;
+    let markersLayer = null;
+    let polygonLayer = null;
+    let fetchedData = []; // holds the currently fetched accident zones
+    let currentSelectedId = null; // tracks the selected zone item
+    let severityChartInstance = null;
+    let compareChartInstance = null;
+    let currentSortColumn = "";
+    let currentSortDirection = "asc";
+
+    // DOM Elements
+    const selectYear = document.getElementById("select-year");
+    const selectSido = document.getElementById("select-sido");
+    const selectGugun = document.getElementById("select-gugun");
+    const btnSearch = document.getElementById("btn-search");
+    const loader = document.getElementById("loader");
+    const liveTime = document.getElementById("live-time");
+
+    // KPI Elements
+    const kpiZones = document.getElementById("kpi-zones");
+    const kpiAccidents = document.getElementById("kpi-accidents");
+    const kpiCasualties = document.getElementById("kpi-casualties");
+    const kpiDeaths = document.getElementById("kpi-deaths");
+
+    // Panes & Containers
+    const listPane = document.getElementById("list-pane");
+    const analyticsPane = document.getElementById("analytics-pane");
+    const safetyPane = document.getElementById("safety-pane");
+    const zoneListContainer = document.getElementById("zone-list-container");
+    const chartsContainer = document.getElementById("charts-container");
+    const emptyStateList = document.getElementById("empty-state-list");
+    const emptyStateAnalytics = document.getElementById("empty-state-analytics");
+    const emptyStateTable = document.getElementById("empty-state-table");
+    const tableBody = document.getElementById("table-body");
+    const dataTable = document.getElementById("data-table");
+    const btnExport = document.getElementById("btn-export");
+
+    // Initialize the Dashboard
+    window.addEventListener("DOMContentLoaded", () => {
+      initClock();
+      initSidoDropdown();
+      initMap();
+      initTabEvents();
+      initTableSortEvents();
+      
+      // Select Sido event
+      selectSido.addEventListener("change", handleSidoChange);
+      // Select Gugun event
+      selectGugun.addEventListener("change", handleGugunChange);
+      // Search Button event
+      btnSearch.addEventListener("click", performSearch);
+      // Export CSV event
+      btnExport.addEventListener("click", exportToCSV);
+    });
+
+    // 1. Clock Init
+    function initClock() {
+      const updateClock = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const date = String(now.getDate()).padStart(2, '0');
+        const hour = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const sec = String(now.getSeconds()).padStart(2, '0');
+        liveTime.innerHTML = `<i class="fa-regular fa-clock"></i> 시스템 동기화: ${year}-${month}-${date} ${hour}:${min}:${sec} | 정상 가동 중`;
+      };
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
+
+    // 2. Dropdown Inits
+    function initSidoDropdown() {
+      // Clear existing options except first
+      selectSido.innerHTML = '<option value="">-- 시/도 선택 --</option>';
+      for (const [code, name] of Object.entries(SIDO_NAMES)) {
+        const option = document.createElement("option");
+        option.value = code;
+        option.textContent = name;
+        selectSido.appendChild(option);
+      }
+    }
+
+    function handleSidoChange() {
+      const sidoCode = selectSido.value;
+      
+      // Reset Gugun dropdown
+      selectGugun.innerHTML = '<option value="">-- 시/군/구 선택 --</option>';
+      selectGugun.disabled = true;
+      btnSearch.disabled = true;
+
+      if (!sidoCode) return;
+
+      const guguns = SIDO_GUGUN_DATA[sidoCode];
+      if (guguns && guguns.length > 0) {
+        guguns.forEach(gugun => {
+          const option = document.createElement("option");
+          option.value = gugun.code;
+          option.textContent = gugun.name;
+          selectGugun.appendChild(option);
+        });
+        selectGugun.disabled = false;
+      }
+    }
+
+    function handleGugunChange() {
+      const gugunCode = selectGugun.value;
+      btnSearch.disabled = !gugunCode;
+    }
+
+    // 3. Map Init
+    function initMap() {
+      // Default center coordinates set to Daejeon (center of Korea)
+      map = L.map("map", {
+        zoomControl: false
+      }).setView([36.3504, 127.3845], 7);
+
+      // Add Zoom Control at top-right
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      // Base layer CartoDB Dark Matter (highly premium visual)
+      const cartoDbDark = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      });
+
+      // Standard OSM layer as alternative
+      const osmStandard = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      cartoDbDark.addTo(map);
+
+      // Add simple layers control
+      const baseMaps = {
+        "다크 테마 (기본)": cartoDbDark,
+        "일반 지도": osmStandard
+      };
+      L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+      markersLayer = L.layerGroup().addTo(map);
+      polygonLayer = L.layerGroup().addTo(map);
+    }
+
+    // 4. Tab Events
+    function initTabEvents() {
+      const tabs = document.querySelectorAll(".side-tab");
+      tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+          tabs.forEach(t => t.classList.remove("active"));
+          tab.classList.add("active");
+
+          const targetPaneId = tab.getAttribute("data-tab");
+          const panes = document.querySelectorAll(".tab-pane-content");
+          panes.forEach(pane => {
+            pane.style.display = "none";
+          });
+          document.getElementById(targetPaneId).style.display = "block";
+        });
+      });
+    }
+
+    // 5. Data Fetching
+    async function performSearch() {
+      const year = selectYear.value;
+      const sido = selectSido.value;
+      const gugun = selectGugun.value;
+
+      if (!year || !sido || !gugun) return;
+
+      loader.classList.add("active");
+      document.getElementById("map-status").textContent = "데이터 조회 중...";
+
+      // Construct request URL
+      // Sigungu code parameter checks:
+      // data.go.kr endpoint expects serviceKey, searchYearCd, siDo, guGun, type, numOfRows, pageNo
+      const requestUrl = `${API_ENDPOINT}?ServiceKey=${API_KEY}&searchYearCd=${year}&siDo=${sido}&guGun=${gugun}&type=json&numOfRows=100&pageNo=1`;
+      
+      try {
+        const responseData = await fetchWithCorsFailover(requestUrl);
+        processAccidentData(responseData);
+      } catch (error) {
+        console.error("Search failed:", error);
+        alert("결빙 데이터 조회에 실패했습니다. (API 서버 또는 CORS 오류)\nCORS 프록시 우회를 시도하는 도중 문제가 생겼을 수 있습니다.");
+        document.getElementById("map-status").textContent = "데이터 조회 오류 발생";
+        resetDashboardData();
+      } finally {
+        loader.classList.remove("active");
+      }
+    }
+
+    async function fetchWithCorsFailover(url) {
+      try {
+        console.log("Attempting direct fetch...");
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Direct fetch response status: ${response.status}`);
+        return await response.json();
+      } catch (err) {
+        console.warn("Direct fetch blocked by CORS or network failed. Attempting CORS proxy failover...", err);
+        // Fallback using api.allorigins.win proxy
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const proxyResponse = await fetch(proxyUrl);
+        if (!proxyResponse.ok) throw new Error(`Proxy fetch failed: ${proxyResponse.status}`);
+        return await proxyResponse.json();
+      }
+    }
+
+    // 6. Data Processing
+    function processAccidentData(data) {
+      fetchedData = [];
+      
+      let body = null;
+      if (data.response && data.response.body) {
+        body = data.response.body;
+      } else if (data.body) {
+        body = data.body;
+      } else {
+        body = data;
+      }
+
+      if (body && body.items && body.items.item) {
+        const item = body.items.item;
+        if (Array.isArray(item)) {
+          fetchedData = item;
+        } else {
+          fetchedData = [item];
+        }
+      }
+
+      // Convert coordinate fields to numeric and validate
+      fetchedData = fetchedData.map((item, index) => {
+        return {
+          id: `zone-${index}`,
+          spot_nm: item.spot_nm || "알 수 없는 지점",
+          occurrnc_cnt: parseInt(item.occurrnc_cnt || 0),
+          caslt_cnt: parseInt(item.caslt_cnt || 0),
+          dth_dnv_cnt: parseInt(item.dth_dnv_cnt || 0),
+          se_dnv_cnt: parseInt(item.se_dnv_cnt || 0),
+          spt_dnv_cnt: parseInt(item.spt_dnv_cnt || 0),
+          inj_ap_cnt: parseInt(item.inj_ap_cnt || 0),
+          la_crd: parseFloat(item.la_crd || 0),
+          lo_crd: parseFloat(item.lo_crd || 0),
+          geom_json: item.geom_json || null
+        };
+      });
+
+      // Filter out records without valid coordinates
+      fetchedData = fetchedData.filter(d => d.la_crd > 0 && d.lo_crd > 0);
+
+      console.log("Processed accident data:", fetchedData);
+
+      updateDashboard();
+    }
+
+    function resetDashboardData() {
+      fetchedData = [];
+      updateDashboard();
+    }
+
+    // 7. Update Dashboard Layout Elements
+    function updateDashboard() {
+      // 1. Update KPIs
+      const totalZones = fetchedData.length;
+      let totalAccidents = 0;
+      let totalCasualties = 0;
+      let totalDeaths = 0;
+      let totalSerious = 0;
+      let totalSlight = 0;
+      let totalReports = 0;
+
+      fetchedData.forEach(d => {
+        totalAccidents += d.occurrnc_cnt;
+        totalCasualties += d.caslt_cnt;
+        totalDeaths += d.dth_dnv_cnt;
+        totalSerious += d.se_dnv_cnt;
+        totalSlight += d.spt_dnv_cnt;
+        totalReports += d.inj_ap_cnt;
+      });
+
+      kpiZones.textContent = totalZones.toLocaleString();
+      kpiAccidents.textContent = totalAccidents.toLocaleString();
+      kpiCasualties.textContent = totalCasualties.toLocaleString();
+      kpiDeaths.textContent = totalDeaths.toLocaleString();
+
+      // Clear layers
+      markersLayer.clearLayers();
+      polygonLayer.clearLayers();
+
+      if (fetchedData.length === 0) {
+        // Show empty states
+        emptyStateList.style.display = "flex";
+        zoneListContainer.style.display = "none";
+        emptyStateAnalytics.style.display = "flex";
+        chartsContainer.style.display = "none";
+        emptyStateTable.style.display = "flex";
+        dataTable.style.display = "none";
+        btnExport.disabled = true;
+        document.getElementById("map-status").textContent = "데이터 없음";
+        return;
+      }
+
+      // Hide empty states
+      emptyStateList.style.display = "none";
+      zoneListContainer.style.display = "flex";
+      emptyStateAnalytics.style.display = "none";
+      chartsContainer.style.display = "block";
+      emptyStateTable.style.display = "none";
+      dataTable.style.display = "table";
+      btnExport.disabled = false;
+
+      // 2. Draw map markers and fit map bounds
+      const bounds = [];
+      fetchedData.forEach(d => {
+        const lat = d.la_crd;
+        const lng = d.lo_crd;
+        const center = [lat, lng];
+        bounds.push(center);
+
+        // Determine color based on accident count
+        let color = "var(--accent-caution)";
+        let fillColor = "#f59e0b";
+        let riskText = "주의구역";
+        if (d.occurrnc_cnt >= 10) {
+          color = "var(--accent-danger)";
+          fillColor = "#ef4444";
+          riskText = "고위험구역";
+        } else if (d.occurrnc_cnt >= 5) {
+          color = "var(--accent-warning)";
+          fillColor = "#f97316";
+          riskText = "중위험구역";
+        }
+
+        // Draw 200m circle overlay representing the accident hotspot radius
+        const circle = L.circle(center, {
+          radius: 200,
+          color: color,
+          weight: 2,
+          fillColor: fillColor,
+          fillOpacity: 0.2
+        }).addTo(markersLayer);
+
+        // Parse and draw polygon if available in GeoJSON
+        if (d.geom_json) {
+          try {
+            const geoJsonData = JSON.parse(d.geom_json);
+            L.geoJSON(geoJsonData, {
+              style: {
+                color: color,
+                weight: 1.5,
+                fillColor: fillColor,
+                fillOpacity: 0.1,
+                dashArray: "3"
+              }
+            }).addTo(polygonLayer);
+          } catch (err) {
+            console.warn("Failed to parse geom_json GeoJSON for spot:", d.spot_nm, err);
+          }
+        }
+
+        // Custom Popup rendering
+        const popupContent = `
+          <div class="map-popup-card">
+            <div class="map-popup-header">
+              <i class="fa-solid fa-triangle-exclamation"></i> ${d.spot_nm}
+            </div>
+            <div class="map-popup-grid">
+              <div class="map-popup-label">위험 등급:</div>
+              <div class="map-popup-val" style="color: ${fillColor}; font-weight: 700;">${riskText}</div>
+              <div class="map-popup-label">사고 건수:</div>
+              <div class="map-popup-val warning">${d.occurrnc_cnt} 건</div>
+              <div class="map-popup-label">사상자 수:</div>
+              <div class="map-popup-val">${d.caslt_cnt} 명</div>
+              <div class="map-popup-label">사망자 수:</div>
+              <div class="map-popup-val danger">${d.dth_dnv_cnt} 명</div>
+              <div class="map-popup-label">중상자 수:</div>
+              <div class="map-popup-val warning">${d.se_dnv_cnt} 명</div>
+              <div class="map-popup-label">경상자 수:</div>
+              <div class="map-popup-val">${d.spt_dnv_cnt} 명</div>
+            </div>
+          </div>
+        `;
+
+        circle.bindPopup(popupContent);
+        
+        // Save marker reference for highlighting/triggering popups later
+        d.marker = circle;
+      });
+
+      // Fit map to markers bounds
+      if (bounds.length > 0) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [30, 30] });
+      }
+
+      document.getElementById("map-status").textContent = `총 ${totalZones}개의 사고다발지역 감지`;
+
+      // 3. Populate List Panel
+      renderZoneList();
+
+      // 4. Update Analytics Charts
+      renderAnalyticsCharts(totalDeaths, totalSerious, totalSlight, totalReports);
+
+      // 5. Populate Detailed Table
+      renderDataTable();
+    }
+
+    // 8. Sidebar List Builder
+    function renderZoneList() {
+      zoneListContainer.innerHTML = "";
+      
+      // Sort current display by accident count descending (priority display)
+      const sortedZones = [...fetchedData].sort((a, b) => b.occurrnc_cnt - a.occurrnc_cnt);
+
+      sortedZones.forEach(d => {
+        const item = document.createElement("div");
+        item.className = `zone-item ${d.id === currentSelectedId ? 'selected' : ''}`;
+        item.setAttribute("data-id", d.id);
+
+        let badgeClass = "badge-low";
+        let riskText = "주의";
+        if (d.occurrnc_cnt >= 10) {
+          badgeClass = "badge-high";
+          riskText = "고위험";
+        } else if (d.occurrnc_cnt >= 5) {
+          badgeClass = "badge-medium";
+          riskText = "중위험";
+        }
+
+        item.innerHTML = `
+          <div class="zone-item-header">
+            <span class="zone-name">${d.spot_nm}</span>
+            <span class="zone-badge ${badgeClass}">${riskText} (사고 ${d.occurrnc_cnt}건)</span>
+          </div>
+          <div class="zone-details-grid">
+            <div class="zone-detail-col">
+              <span class="zone-detail-lbl">사상자</span>
+              <span class="zone-detail-val">${d.caslt_cnt}</span>
+            </div>
+            <div class="zone-detail-col">
+              <span class="zone-detail-lbl">사망</span>
+              <span class="zone-detail-val text-danger">${d.dth_dnv_cnt}</span>
+            </div>
+            <div class="zone-detail-col">
+              <span class="zone-detail-lbl">중상</span>
+              <span class="zone-detail-val text-warning">${d.se_dnv_cnt}</span>
+            </div>
+            <div class="zone-detail-col">
+              <span class="zone-detail-lbl">경상</span>
+              <span class="zone-detail-val">${d.spt_dnv_cnt}</span>
+            </div>
+          </div>
+        `;
+
+        item.addEventListener("click", () => selectZoneItem(d));
+        zoneListContainer.appendChild(item);
+      });
+    }
+
+    function selectZoneItem(zone) {
+      currentSelectedId = zone.id;
+      
+      // Update selected state in List DOM
+      document.querySelectorAll(".zone-item").forEach(item => {
+        if (item.getAttribute("data-id") === zone.id) {
+          item.classList.add("selected");
+        } else {
+          item.classList.remove("selected");
+        }
+      });
+
+      // Update selected state in Table DOM
+      document.querySelectorAll("#table-body tr").forEach(row => {
+        if (row.getAttribute("data-id") === zone.id) {
+          row.classList.add("selected");
+          row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          row.classList.remove("selected");
+        }
+      });
+
+      // Fly to location on map and trigger popup
+      if (zone.marker) {
+        map.flyTo(zone.marker.getLatLng(), 15, {
+          animate: true,
+          duration: 1.5
+        });
+        setTimeout(() => {
+          zone.marker.openPopup();
+        }, 1200);
+      }
+    }
+
+    // 9. Charts Panel Builder
+    function renderAnalyticsCharts(deaths, serious, slight, reports) {
+      // Destroy existing charts if they exist
+      if (severityChartInstance) severityChartInstance.destroy();
+      if (compareChartInstance) compareChartInstance.destroy();
+
+      const ctxSeverity = document.getElementById("severityChart").getContext("2d");
+      const ctxCompare = document.getElementById("compareChart").getContext("2d");
+
+      // Chart 1: Doughnut Chart (Severity breakdown)
+      severityChartInstance = new Chart(ctxSeverity, {
+        type: 'doughnut',
+        data: {
+          labels: ['사망자 수', '중상자 수', '경상자 수', '부상신고 수'],
+          datasets: [{
+            data: [deaths, serious, slight, reports],
+            backgroundColor: [
+              '#ef4444', // Red
+              '#f97316', // Orange
+              '#f59e0b', // Yellow
+              '#3b82f6'  // Blue
+            ],
+            borderColor: '#0f172a',
+            borderWidth: 2,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                color: '#94a3b8',
+                font: {
+                  family: 'Noto Sans KR',
+                  size: 11
+                },
+                padding: 12
+              }
+            }
+          }
+        }
+      });
+
+      // Chart 2: Bar Chart (Top 5 locations by Accident Count)
+      // Sort data to find Top 5
+      const topLocations = [...fetchedData]
+        .sort((a, b) => b.occurrnc_cnt - a.occurrnc_cnt)
+        .slice(0, 5);
+
+      const labels = topLocations.map(d => {
+        // Shorten spot name for chart label
+        let name = d.spot_nm;
+        if (name.includes("(")) {
+          name = name.split("(")[0];
+        }
+        return name.length > 12 ? name.substring(0, 12) + "..." : name;
+      });
+      const accidentCounts = topLocations.map(d => d.occurrnc_cnt);
+      const casualtyCounts = topLocations.map(d => d.caslt_cnt);
+
+      compareChartInstance = new Chart(ctxCompare, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '사고건수',
+              data: accidentCounts,
+              backgroundColor: 'rgba(249, 115, 22, 0.75)',
+              borderColor: '#f97316',
+              borderWidth: 1
+            },
+            {
+              label: '사상자수',
+              data: casualtyCounts,
+              backgroundColor: 'rgba(56, 189, 248, 0.75)',
+              borderColor: '#38bdf8',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: { color: '#94a3b8', font: { size: 9, family: 'Noto Sans KR' } },
+              grid: { color: 'rgba(255, 255, 255, 0.05)' }
+            },
+            y: {
+              ticks: { color: '#94a3b8', font: { size: 10 } },
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { size: 10, family: 'Noto Sans KR' } }
+            }
+          }
+        }
+      });
+    }
+
+    // 10. Table Panel Builder
+    function renderDataTable() {
+      // Sort data initially by accident count descending
+      if (currentSortColumn === "") {
+        currentSortColumn = "occur";
+        currentSortDirection = "desc";
+      }
+      
+      sortFetchedData();
+      populateTableRows();
+    }
+
+    function populateTableRows() {
+      tableBody.innerHTML = "";
+
+      fetchedData.forEach(d => {
+        const row = document.createElement("tr");
+        row.setAttribute("data-id", d.id);
+        if (d.id === currentSelectedId) {
+          row.className = "selected";
+        }
+
+        row.innerHTML = `
+          <td class="font-semibold" style="max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${d.spot_nm}</td>
+          <td class="text-right font-semibold text-warning">${d.occurrnc_cnt.toLocaleString()}</td>
+          <td class="text-right">${d.caslt_cnt.toLocaleString()}</td>
+          <td class="text-right text-danger font-semibold">${d.dth_dnv_cnt.toLocaleString()}</td>
+          <td class="text-right text-warning">${d.se_dnv_cnt.toLocaleString()}</td>
+          <td class="text-right">${d.spt_dnv_cnt.toLocaleString()}</td>
+        `;
+
+        row.addEventListener("click", () => selectZoneItem(d));
+        tableBody.appendChild(row);
+      });
+    }
+
+    // 11. Table Sorting Actions
+    function initTableSortEvents() {
+      document.getElementById("th-name").addEventListener("click", () => handleTableSort("name"));
+      document.getElementById("th-occur").addEventListener("click", () => handleTableSort("occur"));
+      document.getElementById("th-caslt").addEventListener("click", () => handleTableSort("caslt"));
+      document.getElementById("th-death").addEventListener("click", () => handleTableSort("death"));
+      document.getElementById("th-se").addEventListener("click", () => handleTableSort("se"));
+      document.getElementById("th-spt").addEventListener("click", () => handleTableSort("spt"));
+    }
+
+    function handleTableSort(columnKey) {
+      if (currentSortColumn === columnKey) {
+        currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+      } else {
+        currentSortColumn = columnKey;
+        currentSortDirection = "desc"; // Default to desc for numeric values
+      }
+
+      // Update sort arrow icons
+      updateSortIcons();
+      sortFetchedData();
+      populateTableRows();
+    }
+
+    function updateSortIcons() {
+      const headers = {
+        "name": "th-name",
+        "occur": "th-occur",
+        "caslt": "th-caslt",
+        "death": "th-death",
+        "se": "th-se",
+        "spt": "th-spt"
+      };
+
+      for (const [key, elementId] of Object.entries(headers)) {
+        const th = document.getElementById(elementId);
+        if (key === currentSortColumn) {
+          const arrow = currentSortDirection === "asc" ? "fa-sort-up" : "fa-sort-down";
+          th.innerHTML = th.textContent.trim() + ` <i class="fa-solid ${arrow}"></i>`;
+        } else {
+          th.innerHTML = th.textContent.trim() + ` <i class="fa-solid fa-sort"></i>`;
+        }
+      }
+    }
+
+    function sortFetchedData() {
+      fetchedData.sort((a, b) => {
+        let valA, valB;
+        switch (currentSortColumn) {
+          case "name":
+            valA = a.spot_nm;
+            valB = b.spot_nm;
+            break;
+          case "occur":
+            valA = a.occurrnc_cnt;
+            valB = b.occurrnc_cnt;
+            break;
+          case "caslt":
+            valA = a.caslt_cnt;
+            valB = b.caslt_cnt;
+            break;
+          case "death":
+            valA = a.dth_dnv_cnt;
+            valB = b.dth_dnv_cnt;
+            break;
+          case "se":
+            valA = a.se_dnv_cnt;
+            valB = b.se_dnv_cnt;
+            break;
+          case "spt":
+            valA = a.spt_dnv_cnt;
+            valB = b.spt_dnv_cnt;
+            break;
+          default:
+            return 0;
+        }
+
+        if (typeof valA === "string") {
+          return currentSortDirection === "asc" 
+            ? valA.localeCompare(valB) 
+            : valB.localeCompare(valA);
+        } else {
+          return currentSortDirection === "asc" 
+            ? valA - valB 
+            : valB - valA;
+        }
+      });
+    }
+
+    // 12. Export to CSV Action
+    function exportToCSV() {
+      if (fetchedData.length === 0) return;
+
+      const year = selectYear.value;
+      const sidoName = selectSido.options[selectSido.selectedIndex].text;
+      const gugunName = selectGugun.options[selectGugun.selectedIndex].text;
+
+      let csvContent = "\ufeff"; // UTF-8 BOM to display Korean correctly in Excel
+      csvContent += `조회 정보: ${year}년 ${sidoName} ${gugunName}\n`;
+      csvContent += "사고 지역 위치명,사고 건수,사상자 수,사망자 수,중상자 수,경상자 수,위도,경도\n";
+
+      fetchedData.forEach(d => {
+        // Clean location name of commas
+        const cleanName = d.spot_nm.replace(/,/g, " ");
+        csvContent += `${cleanName},${d.occurrnc_cnt},${d.caslt_cnt},${d.dth_dnv_cnt},${d.se_dnv_cnt},${d.spt_dnv_cnt},${d.la_crd},${d.lo_crd}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `결빙사고다발지역_${year}_${sidoName}_${gugunName}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
